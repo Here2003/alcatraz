@@ -1,4 +1,2 @@
 streamlit
-requests
-beautifulsoup4
 openai
