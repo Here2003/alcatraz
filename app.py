@@ -1,158 +1,134 @@
+import os
 import streamlit as st
-from datetime import date
 
-st.set_page_config(page_title="Grasse Déchets", page_icon="♻️", layout="wide")
+st.set_page_config(
+    page_title="Salut !",
+    page_icon="💬",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+)
 
-SCHEDULE_URL = "https://www.paysdegrasse.fr/points-et-frequence-de-collecte"
-PRO_URL = "https://www.paysdegrasse.fr/dechets-professionnels"
-PHONE = "0800 506 586"
-
-SECTORS = {
-    "Je ne connais pas mon secteur": {
-        "ordures": "à vérifier selon l'adresse",
-        "tri": "à vérifier selon l'adresse",
-    },
-    "Centre-ville": {
-        "ordures": "mardi et samedi (indicatif, à confirmer)",
-        "tri": "jeudi (indicatif, à confirmer)",
-    },
-    "Centre historique": {
-        "ordures": "à confirmer sur le calendrier officiel",
-        "tri": "lundi et jeudi (indicatif, à confirmer)",
-    },
-    "Saint-Claude": {
-        "ordures": "mardi et samedi (indicatif, à confirmer)",
-        "tri": "mercredi (indicatif, à confirmer)",
-    },
-    "Le Plan / Saint-Marc / Sainte-Marguerite": {
-        "ordures": "mardi et samedi (indicatif, à confirmer)",
-        "tri": "vendredi (indicatif, à confirmer)",
-    },
-    "Saint-François / Super Grasse": {
-        "ordures": "lundi et vendredi (indicatif, à confirmer)",
-        "tri": "mardi (indicatif, à confirmer)",
-    },
-    "Les 4 Chemins / Saint-Antoine / Saint-Jacques / Sainte-Anne": {
-        "ordures": "lundi et vendredi (indicatif, à confirmer)",
-        "tri": "jeudi (indicatif, à confirmer)",
-    },
-    "Les Aspres / La Tourache / Les Roumiguières / Valcluse": {
-        "ordures": "lundi et vendredi (indicatif, à confirmer)",
-        "tri": "samedi (indicatif, à confirmer)",
-    },
-    "Saint-Mathieu / Magagnosc / Saint-Jean / Saint-Joseph / Plascassier": {
-        "ordures": "mardi et samedi (indicatif, à confirmer)",
-        "tri": "lundi (indicatif, à confirmer)",
-    },
-}
-
+# Simple, mobile-first conversational assistant.
 st.markdown("""
 <style>
-.stApp {background:#f4f7f3;}
-.block-container {max-width:1050px;padding-top:2rem;padding-bottom:3rem;}
-.hero {background:#173f30;color:white;padding:2rem;border-radius:20px;margin-bottom:1.5rem;}
-.hero h1 {color:white;margin:.4rem 0;font-size:2.5rem;}
-.hero p {color:#e1eee6;margin:0;}
-.card {background:white;border:1px solid #dce6dd;border-radius:14px;padding:1.1rem;min-height:115px;}
-.label {font-size:.9rem;color:#68766b;}
-.value {font-weight:700;font-size:1.15rem;color:#173f30;margin-top:.55rem;}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
+.stApp { background: #f7f7f5; }
+.block-container { max-width: 760px; padding: 1rem 1rem 2rem; }
+.hero { padding: 1.2rem 0 .8rem; }
+.hero h1 { font-size: 2rem; margin: 0; color: #20251f; }
+.hero p { color: #687067; margin-top: .45rem; }
+div[data-testid="stChatMessage"] { border-radius: 18px; padding: .7rem; }
+div[data-testid="stChatInput"] { padding-bottom: .8rem; }
+button[kind="primary"] { border-radius: 12px; }
+.small-muted { color: #737a73; font-size: .85rem; }
 </style>
 <div class="hero">
-  <div>♻️ GRASSE DÉCHETS</div>
-  <h1>La collecte, en clair.</h1>
-  <p>Informations pratiques pour toute la ville de Grasse.</p>
+  <h1>💬 Salut !</h1>
+  <p>On peut parler de tout et de rien. Pose-moi une question, raconte-moi ta journée, demande un conseil ou lance un sujet.</p>
 </div>
 """, unsafe_allow_html=True)
 
 with st.sidebar:
-    st.title("♻️ Grasse Déchets")
-    profile = st.radio("Profil", ["Habitant", "Professionnel / hôtel"])
-    sector = st.selectbox("Quartier / secteur", list(SECTORS.keys()))
-    st.caption("Les consignes de la convention professionnelle peuvent prévaloir.")
-    st.markdown("### Liens officiels")
-    st.markdown(f"[Calendrier de collecte]({SCHEDULE_URL})")
-    st.markdown(f"[Déchets professionnels]({PRO_URL})")
-    st.caption(f"Service déchets : {PHONE}")
-
-st.subheader("Informations du secteur")
-info = SECTORS[sector]
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.markdown(
-        f'<div class="card"><div class="label">🗑️ Ordures ménagères</div>'
-        f'<div class="value">{info["ordures"]}</div></div>',
-        unsafe_allow_html=True,
+    st.title("Réglages")
+    assistant_style = st.selectbox(
+        "Style de réponse",
+        ["Naturel", "Drôle", "Direct", "Détaillé"],
     )
-with col2:
-    st.markdown(
-        f'<div class="card"><div class="label">♻️ Tri sélectif</div>'
-        f'<div class="value">{info["tri"]}</div></div>',
-        unsafe_allow_html=True,
-    )
-with col3:
-    st.markdown(
-        f'<div class="card"><div class="label">📅 Aujourd’hui</div>'
-        f'<div class="value">{date.today().strftime("%d/%m/%Y")}</div></div>',
-        unsafe_allow_html=True,
-    )
+    if st.button("Nouvelle conversation", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
+    st.markdown("---")
+    st.caption("Pour des réponses par IA, ajoute une clé API dans les secrets de Streamlit.")
 
-st.warning(
-    "Les fréquences affichées sont indicatives. Vérifie le calendrier officiel pour l'adresse précise. "
-    "Pour un hôtel, restaurant ou commerce, vérifie également la convention professionnelle."
-)
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-st.subheader("Assistant de collecte")
-st.write("Pose une question sur les bacs, le tri, les cartons ou les encombrants.")
-question = st.text_area(
-    "Ta question",
-    placeholder="Ex. : Quand sortir les poubelles pour un hôtel ?",
-    height=100,
-)
-submitted = st.button("Répondre", type="primary", use_container_width=True)
+# Friendly starter prompts that fit mobile screens.
+if not st.session_state.messages:
+    st.markdown("**Tu veux parler de quoi ?**")
+    starters = [
+        "Raconte-moi une anecdote drôle",
+        "Aide-moi à trouver une idée",
+        "Parlons de musique ou de films",
+        "J'ai besoin d'un conseil",
+    ]
+    cols = st.columns(2)
+    for idx, starter in enumerate(starters):
+        with cols[idx % 2]:
+            if st.button(starter, key=f"starter_{idx}", use_container_width=True):
+                st.session_state.pending_prompt = starter
+                st.rerun()
 
-if submitted:
-    if not question.strip():
-        st.error("Écris une question avant de continuer.")
-    else:
-        q = question.lower()
-        is_professional = profile == "Professionnel / hôtel" or any(
-            word in q for word in ("hôtel", "hotel", "restaurant", "commerce", "entreprise", "professionnel")
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+prompt = st.chat_input("Écris ton message…")
+if not prompt and st.session_state.get("pending_prompt"):
+    prompt = st.session_state.pop("pending_prompt")
+
+def local_reply(text, style):
+    t = text.lower()
+    if any(w in t for w in ["bonjour", "salut", "coucou", "hey", "hello"]):
+        return "Salut 😄 Ça fait plaisir ! Quoi de neuf ? Tu veux discuter tranquillement ou tu as quelque chose en tête ?"
+    if any(w in t for w in ["triste", "ça va pas", "je vais mal", "stress", "angoissé", "angoissée"]):
+        return "Je suis là pour t'écouter. Tu veux me raconter ce qui se passe ? On peut prendre les choses une par une, sans jugement."
+    if "merci" in t:
+        return "Avec plaisir 😊 Tu peux continuer, je suis là."
+    if any(w in t for w in ["blague", "drôle", "drole", "rigole"]):
+        return "Pourquoi les plongeurs plongent-ils toujours en arrière et jamais en avant ? Parce que sinon ils tombent dans le bateau. 😄 Tu en veux une autre ?"
+    if any(w in t for w in ["poubelle", "déchet", "collecte", "grasse"]):
+        return ("Je peux aussi t'aider sur les infos de collecte à Grasse. Pour un jour de passage précis, "
+                "il faut vérifier le calendrier officiel : https://www.paysdegrasse.fr/points-et-frequence-de-collecte")
+    if any(w in t for w in ["idée", "idee", "projet", "créer", "creer"]):
+        return "Avec plaisir ! On peut trouver des idées ensemble. Tu cherches une idée pour un projet, un cadeau, une sortie ou quelque chose d'autre ?"
+    return "Je t'écoute 🙂 Tu peux m'en dire un peu plus ? Je peux t'aider à réfléchir, expliquer un sujet, écrire quelque chose ou simplement discuter."
+
+def get_reply(text, style, history):
+    api_key = ""
+    try:
+        api_key = st.secrets.get("OPENAI_API_KEY", "")
+    except Exception:
+        api_key = os.getenv("OPENAI_API_KEY", "")
+    if not api_key:
+        return local_reply(text, style)
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        style_instruction = {
+            "Naturel": "parle naturellement, comme dans une conversation amicale",
+            "Drôle": "sois léger et drôle quand c'est approprié, sans forcer les blagues",
+            "Direct": "réponds directement et simplement",
+            "Détaillé": "explique clairement avec un peu plus de détails",
+        }[style]
+        transcript = []
+        for item in history[-12:]:
+            transcript.append({"role": item["role"], "content": item["content"]})
+        transcript.append({"role": "user", "content": text})
+        response = client.responses.create(
+            model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+            instructions=(
+                "Tu es un assistant conversationnel en français. Tu peux discuter de sujets variés, "
+                "répondre aux questions, aider à réfléchir et écrire. Sois chaleureux, naturel et honnête. "
+                "N'invente pas de faits présentés comme certains. Si tu ne sais pas, dis-le. "
+                "Style demandé : " + style_instruction + "."
+            ),
+            input=transcript,
         )
+        return response.output_text
+    except Exception:
+        return ("Je n'arrive pas à joindre le service IA pour le moment. Vérifie la clé API et les "
+                "journaux Streamlit. En attendant, tu peux toujours me parler, mais mes réponses seront limitées.")
 
-        if is_professional:
-            answer = (
-                "Pour un professionnel, les jours généraux d'un quartier ne confirment pas le planning "
-                "de l'établissement. Vérifie la convention de collecte ou contacte le service déchets "
-                f"du Pays de Grasse au {PHONE}. Consulte aussi les consignes professionnelles : {PRO_URL}"
-            )
-        elif any(word in q for word in ("encombrant", "meuble", "matelas", "gravats", "déchetterie")):
-            answer = (
-                "Ne dépose pas les encombrants sur le trottoir sans vérifier les consignes. "
-                f"Consulte les informations officielles du Pays de Grasse : {SCHEDULE_URL}"
-            )
-        elif any(word in q for word in ("tri", "carton", "recycl", "emballage", "papier", "jaune", "verre")):
-            answer = (
-                f"Pour le secteur « {sector} », l'indication générale du tri est : {info['tri']}. "
-                f"Confirme ce jour pour ton adresse sur le calendrier officiel : {SCHEDULE_URL}"
-            )
-        else:
-            answer = (
-                f"Pour le secteur « {sector} », l'indication générale des ordures ménagères est : "
-                f"{info['ordures']}. Confirme ce jour pour ton adresse sur le calendrier officiel : {SCHEDULE_URL}"
-            )
+if prompt:
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    with st.chat_message("assistant"):
+        with st.spinner("Je réfléchis…"):
+            reply = get_reply(prompt, assistant_style, st.session_state.messages[:-1])
+        st.markdown(reply)
+    st.session_state.messages.append({"role": "assistant", "content": reply})
 
-        st.markdown("### Réponse")
-        st.write(answer)
-
-st.divider()
-left, right = st.columns(2)
-with left:
-    st.markdown("#### Calendrier officiel")
-    st.write("Jours de collecte à vérifier par adresse.")
-    st.link_button("Consulter le calendrier", SCHEDULE_URL, use_container_width=True)
-with right:
-    st.markdown("#### Professionnels")
-    st.write("Consignes pour les hôtels, restaurants et commerces.")
-    st.link_button("Consulter les consignes", PRO_URL, use_container_width=True)
-
-st.caption("Grasse Déchets · Les informations générales ne remplacent pas la confirmation officielle par adresse.")
+st.markdown('<p class="small-muted">Astuce : sur téléphone, ouvre le menu en haut à gauche pour changer le style ou démarrer une nouvelle conversation.</p>', unsafe_allow_html=True)
