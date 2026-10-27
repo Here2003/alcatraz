@@ -208,4 +208,3 @@ elif not image_televersee:
     st.caption("Importe une image pour activer la génération.")
 elif not confirmation:
     st.caption("Confirme l'avertissement ci-dessus pour activer la génération.")
-
