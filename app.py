@@ -1,111 +1,96 @@
+"""
+Assistant de collecte des déchets pour toute la ville de Grasse.
+Lancement :
+    pip install streamlit openai
+    streamlit run app.py
+
+Pour activer les réponses IA, définir OPENAI_API_KEY dans les secrets
+Streamlit ou dans l'environnement. Sans clé, le mode guidé fonctionne.
+Les jours affichés sont des fréquences générales à vérifier sur le site officiel.
+"""
 import os
 from datetime import datetime
 
 import streamlit as st
 
-st.set_page_config(page_title="Assistant déchets - Grasse", page_icon="🗑️", layout="centered")
+st.set_page_config(
+    page_title="Assistant déchets — Grasse",
+    page_icon="🗑️",
+    layout="centered",
+)
 
 SCHEDULE_URL = "https://www.paysdegrasse.fr/points-et-frequence-de-collecte"
 PRO_URL = "https://www.paysdegrasse.fr/dechets-professionnels"
 CONTACT_PHONE = "0800 506 586"
 
+# Fréquences générales indicatives par secteur.
+# Vérifier la page officielle : la collecte peut varier selon la rue et le type d'usager.
 SECTORS = {
     "Centre-ville": {"ordures": "mardi et samedi", "tri": "jeudi"},
-    "Centre historique": {"ordures": "tous les jours (fréquence générale à confirmer)", "tri": "lundi et jeudi"},
+    "Centre historique": {
+        "ordures": "fréquence quotidienne indiquée à confirmer",
+        "tri": "lundi et jeudi",
+    },
     "Saint-Claude": {"ordures": "mardi et samedi", "tri": "mercredi"},
-    "Le Plan / Saint-Marc / Sainte-Marguerite": {"ordures": "mardi et samedi", "tri": "vendredi"},
-    "Saint-François / Super Grasse": {"ordures": "lundi et vendredi", "tri": "mardi"},
-    "Les 4 Chemins / Saint-Antoine / Saint-Jacques / Sainte-Anne": {"ordures": "lundi et vendredi", "tri": "jeudi"},
-    "Les Aspres / La Tourache / Les Roumiguières / Valcluse": {"ordures": "lundi et vendredi", "tri": "samedi"},
-    "Saint-Mathieu / Magagnosc / Saint-Jean / Saint-Joseph / Plascassier": {"ordures": "mardi et samedi", "tri": "lundi"},
+    "Le Plan / Saint-Marc / Sainte-Marguerite": {
+        "ordures": "mardi et samedi", "tri": "vendredi"
+    },
+    "Saint-François / Super Grasse": {
+        "ordures": "lundi et vendredi", "tri": "mardi"
+    },
+    "Les 4 Chemins / Saint-Antoine / Saint-Jacques / Sainte-Anne": {
+        "ordures": "lundi et vendredi", "tri": "jeudi"
+    },
+    "Les Aspres / La Tourache / Les Roumiguières / Valcluse": {
+        "ordures": "lundi et vendredi", "tri": "samedi"
+    },
+    "Saint-Mathieu / Magagnosc / Saint-Jean / Saint-Joseph / Plascassier": {
+        "ordures": "mardi et samedi", "tri": "lundi"
+    },
 }
 
-def answer_question(question, sector):
+
+def guided_answer(question, sector, user_type):
     q = question.lower()
     info = SECTORS[sector]
-    if any(word in q for word in ["tri", "carton", "recycl", "emballage", "jaune"]):
+
+    if any(word in q for word in ["encombrant", "meuble", "matelas", "déchetterie", "decheterie"]):
         return (
-            f"Pour le secteur {sector}, le jour général indiqué pour le tri est : "
-            f"{info['tri']}. Attention : pour un hôtel, confirme ce jour dans la convention "
-            "de collecte professionnelle avant de t'y fier."
+            "Pour les encombrants ou les déchets qui ne vont pas dans les bacs habituels, "
+            "consulte le site officiel du Pays de Grasse pour connaître les modalités à jour. "
+            "Ne les dépose pas sur le trottoir sans confirmation."
         )
-    if any(word in q for word in ["contrat", "convention", "professionnel", "hôtel", "hotel"]):
-        return (
-            "Le planning applicable à un hôtel peut être différent du calendrier général. "
-            f"Vérifie la convention de collecte ou contacte le service déchets du Pays de Grasse "
-            f"au {CONTACT_PHONE}. Consulte aussi la page officielle des déchets professionnels."
+
+    if any(word in q for word in ["tri", "carton", "recycl", "emballage", "jaune", "papier", "verre"]):
+        answer = (
+            f"Pour le secteur **{sector}**, le jour général indiqué ici pour le tri sélectif "
+            f"est **{info['tri']}**. Les consignes peuvent dépendre de la rue et du type de bac. "
+            f"Vérifie le calendrier officiel : {SCHEDULE_URL}"
         )
-    return (
-        f"Pour le secteur {sector}, les jours généraux des ordures ménagères sont : "
-        f"{info['ordures']}. La consigne générale est de sortir les bacs la veille au soir "
-        "et de les rentrer après le passage. Pour un hôtel, la convention professionnelle "
-        "prévaut : confirme les jours et horaires exacts auprès du service de collecte."
-    )
-
-def main():
-    st.title("🗑️ Assistant déchets — Hôtel à Grasse")
-    st.write("Pose une question sur les jours de collecte, les bacs ou le tri.")
-
-    with st.sidebar:
-        st.header("Configuration")
-        sector = st.selectbox("Secteur de Grasse", list(SECTORS.keys()), index=0)
-        st.markdown("### Sources officielles")
-        st.markdown(f"[Fréquences de collecte]({SCHEDULE_URL})")
-        st.markdown(f"[Déchets professionnels]({PRO_URL})")
-        st.write(f"Contact service déchets : {CONTACT_PHONE}")
-
-    st.warning(
-        "Important : les fréquences ci-dessous sont générales. Pour un hôtel, "
-        "la convention professionnelle et les consignes données à l'établissement priment."
-    )
-
-    left, right = st.columns(2)
-    left.metric("Ordures ménagères", SECTORS[sector]["ordures"])
-    right.metric("Tri sélectif", SECTORS[sector]["tri"])
-
-    with st.form("ask_form"):
-        question = st.text_area(
-            "Ta question",
-            placeholder="Ex. : Quand sortir les poubelles noires ?",
+    elif any(word in q for word in ["professionnel", "commerce", "restaurant", "hôtel", "hotel", "entreprise", "contrat", "convention"]):
+        answer = (
+            "Pour les professionnels, les jours et modalités peuvent être définis par une "
+            "convention de collecte spécifique. Consulte la page officielle des déchets "
+            f"professionnels : {PRO_URL}, ou contacte le service du Pays de Grasse au "
+            f"{CONTACT_PHONE}. Ne te fie pas uniquement aux fréquences générales du quartier."
         )
-        submitted = st.form_submit_button("Répondre")
+    elif any(word in q for word in ["quand", "sortir", "jour", "ordure", "ménag", "menag", "poubelle", "bac", "noire"]):
+        answer = (
+            f"Pour le secteur **{sector}**, les fréquences générales des ordures ménagères "
+            f"sont indiquées comme **{info['ordures']}**. La consigne générale peut être de "
+            "sortir le bac la veille au soir, mais vérifie les règles exactes de ton adresse "
+            f"sur le site officiel : {SCHEDULE_URL}."
+        )
+    else:
+        answer = (
+            f"Pour le secteur **{sector}**, les fréquences générales affichées sont : "
+            f"ordures ménagères — **{info['ordures']}** ; tri sélectif — **{info['tri']}**. "
+            "Pour confirmer le jour exact, consulte la page officielle de collecte."
+        )
 
-    if submitted:
-        if not question.strip():
-            st.error("Écris une question.")
-        else:
-            api_key = os.getenv("OPENAI_API_KEY", "").strip()
-            if api_key:
-                try:
-                    from openai import OpenAI
-                    client = OpenAI(api_key=api_key)
-                    response = client.responses.create(
-                        model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
-                        instructions=(
-                            "Tu es un assistant de collecte des déchets pour un hôtel à Grasse. "
-                            "Réponds en français, simplement, sans inventer les horaires. "
-                            "Précise que la convention professionnelle de l'hôtel prévaut sur "
-                            "les fréquences générales et recommande de vérifier les sources officielles."
-                        ),
-                        input=(
-                            f"Secteur : {sector}. Fréquence générale ordures : "
-                            f"{SECTORS[sector]['ordures']}. Fréquence générale tri : "
-                            f"{SECTORS[sector]['tri']}. Question : {question}\n"
-                            f"Sources : {SCHEDULE_URL} et {PRO_URL}"
-                        ),
-                    )
-                    result = response.output_text
-                except Exception:
-                    result = answer_question(question, sector)
-                    st.info("L'IA n'est pas disponible pour le moment ; réponse guidée affichée.")
-            else:
-                result = answer_question(question, sector)
-                st.caption("Mode guidé activé. Pour les réponses générées par IA, configure OPENAI_API_KEY.")
-            st.subheader("Réponse")
-            st.write(result)
-            st.markdown(f"Sources : [Collecte générale]({SCHEDULE_URL}) · [Professionnels]({PRO_URL})")
-
-    st.caption(f"Application informative — {datetime.now().strftime('%d/%m/%Y')}. Vérifie toujours les consignes propres à l'hôtel.")
-
-if __name__ == "__main__":
-    main()
+    if user_type == "Professionnel":
+        answer += (
+            "\n\n**Attention :** pour un commerce, restaurant, hôtel ou autre professionnel, "
+            "la convention de collecte peut prévoir des modalités différentes."
+        )
+    return answer
