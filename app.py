@@ -1,96 +1,111 @@
-"""
-Assistant de collecte des déchets pour un hôtel à Grasse
-Lancement :
-    pip install streamlit requests beautifulsoup4 openai
-    streamlit run app.py
-
-Option IA générative :
-    Définir OPENAI_API_KEY dans l'environnement.
-    Exemple macOS/Linux : export OPENAI_API_KEY="..."
-    Exemple Windows PowerShell : $env:OPENAI_API_KEY="..."
-
-Sans clé API, l'application fonctionne en mode réponses guidées.
-Les horaires généraux sont ceux publiés par le Pays de Grasse.
-Pour un hôtel, la convention professionnelle de collecte prévaut.
-"""
-
 import os
-import re
 from datetime import datetime
-from urllib.parse import urlparse
 
-import requests
 import streamlit as st
-from bs4 import BeautifulSoup
+
+st.set_page_config(page_title="Assistant déchets - Grasse", page_icon="🗑️", layout="centered")
 
 SCHEDULE_URL = "https://www.paysdegrasse.fr/points-et-frequence-de-collecte"
 PRO_URL = "https://www.paysdegrasse.fr/dechets-professionnels"
 CONTACT_PHONE = "0800 506 586"
-CONTACT_EMAIL = "redevancespeciale@paysdegrasse.fr"
 
-# Jours de collecte générale publiés par le Pays de Grasse.
-# Attention : il ne s'agit pas nécessairement du planning applicable à un hôtel.
 SECTORS = {
-    "Saint-François / Super Grasse": {
-        "ordures": ["lundi", "vendredi"],
-        "tri": ["mardi"],
-    },
-    "Centre historique": {
-        "ordures": ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"],
-        "tri": ["lundi", "jeudi"],
-    },
-    "Les 4 Chemins / Saint-Antoine / Saint-Jacques / Sainte-Anne": {
-        "ordures": ["lundi", "vendredi"],
-        "tri": ["jeudi"],
-    },
-    "Les Aspres / La Tourache / Les Roumiguières / Valcluse": {
-        "ordures": ["lundi", "vendredi"],
-        "tri": ["samedi"],
-    },
-    "Le Plan / Saint-Marc / Sainte-Marguerite": {
-        "ordures": ["mardi", "samedi"],
-        "tri": ["vendredi"],
-    },
-    "Saint-Claude": {
-        "ordures": ["mardi", "samedi"],
-        "tri": ["mercredi"],
-    },
-    "Centre-ville": {
-        "ordures": ["mardi", "samedi"],
-        "tri": ["jeudi"],
-    },
-    "Saint-Mathieu / Magagnosc / Saint-Jean / Saint-Joseph / Plascassier": {
-        "ordures": ["mardi", "samedi"],
-        "tri": ["lundi"],
-    },
+    "Centre-ville": {"ordures": "mardi et samedi", "tri": "jeudi"},
+    "Centre historique": {"ordures": "tous les jours (fréquence générale à confirmer)", "tri": "lundi et jeudi"},
+    "Saint-Claude": {"ordures": "mardi et samedi", "tri": "mercredi"},
+    "Le Plan / Saint-Marc / Sainte-Marguerite": {"ordures": "mardi et samedi", "tri": "vendredi"},
+    "Saint-François / Super Grasse": {"ordures": "lundi et vendredi", "tri": "mardi"},
+    "Les 4 Chemins / Saint-Antoine / Saint-Jacques / Sainte-Anne": {"ordures": "lundi et vendredi", "tri": "jeudi"},
+    "Les Aspres / La Tourache / Les Roumiguières / Valcluse": {"ordures": "lundi et vendredi", "tri": "samedi"},
+    "Saint-Mathieu / Magagnosc / Saint-Jean / Saint-Joseph / Plascassier": {"ordures": "mardi et samedi", "tri": "lundi"},
 }
 
-DAYS_FR = [
-    "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"
-]
-
-
-@st.cache_data(ttl=3600, show_spinner=False)
-def fetch_official_text(url: str) -> str:
-    """Récupère le texte public d'une page officielle, avec délai d'expiration."""
-    try:
-        response = requests.get(
-            url,
-            timeout=12,
-            headers={"User-Agent": "HotelDechetsGrasse/1.0 (assistant informatif)"},
+def answer_question(question, sector):
+    q = question.lower()
+    info = SECTORS[sector]
+    if any(word in q for word in ["tri", "carton", "recycl", "emballage", "jaune"]):
+        return (
+            f"Pour le secteur {sector}, le jour général indiqué pour le tri est : "
+            f"{info['tri']}. Attention : pour un hôtel, confirme ce jour dans la convention "
+            "de collecte professionnelle avant de t'y fier."
         )
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-        for tag in soup(["script", "style", "nav", "footer", "header"]):
-            tag.decompose()
-        text = re.sub(r"\s+", " ", soup.get_text(" ", strip=True))
-        return text[:18000]
-    except requests.RequestException:
-        return ""
+    if any(word in q for word in ["contrat", "convention", "professionnel", "hôtel", "hotel"]):
+        return (
+            "Le planning applicable à un hôtel peut être différent du calendrier général. "
+            f"Vérifie la convention de collecte ou contacte le service déchets du Pays de Grasse "
+            f"au {CONTACT_PHONE}. Consulte aussi la page officielle des déchets professionnels."
+        )
+    return (
+        f"Pour le secteur {sector}, les jours généraux des ordures ménagères sont : "
+        f"{info['ordures']}. La consigne générale est de sortir les bacs la veille au soir "
+        "et de les rentrer après le passage. Pour un hôtel, la convention professionnelle "
+        "prévaut : confirme les jours et horaires exacts auprès du service de collecte."
+    )
 
+def main():
+    st.title("🗑️ Assistant déchets — Hôtel à Grasse")
+    st.write("Pose une question sur les jours de collecte, les bacs ou le tri.")
 
-def weekday_fr(date_obj):
-    return DAYS_FR[date_obj.weekday()]
+    with st.sidebar:
+        st.header("Configuration")
+        sector = st.selectbox("Secteur de Grasse", list(SECTORS.keys()), index=0)
+        st.markdown("### Sources officielles")
+        st.markdown(f"[Fréquences de collecte]({SCHEDULE_URL})")
+        st.markdown(f"[Déchets professionnels]({PRO_URL})")
+        st.write(f"Contact service déchets : {CONTACT_PHONE}")
 
+    st.warning(
+        "Important : les fréquences ci-dessous sont générales. Pour un hôtel, "
+        "la convention professionnelle et les consignes données à l'établissement priment."
+    )
 
-def official_context():
+    left, right = st.columns(2)
+    left.metric("Ordures ménagères", SECTORS[sector]["ordures"])
+    right.metric("Tri sélectif", SECTORS[sector]["tri"])
+
+    with st.form("ask_form"):
+        question = st.text_area(
+            "Ta question",
+            placeholder="Ex. : Quand sortir les poubelles noires ?",
+        )
+        submitted = st.form_submit_button("Répondre")
+
+    if submitted:
+        if not question.strip():
+            st.error("Écris une question.")
+        else:
+            api_key = os.getenv("OPENAI_API_KEY", "").strip()
+            if api_key:
+                try:
+                    from openai import OpenAI
+                    client = OpenAI(api_key=api_key)
+                    response = client.responses.create(
+                        model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+                        instructions=(
+                            "Tu es un assistant de collecte des déchets pour un hôtel à Grasse. "
+                            "Réponds en français, simplement, sans inventer les horaires. "
+                            "Précise que la convention professionnelle de l'hôtel prévaut sur "
+                            "les fréquences générales et recommande de vérifier les sources officielles."
+                        ),
+                        input=(
+                            f"Secteur : {sector}. Fréquence générale ordures : "
+                            f"{SECTORS[sector]['ordures']}. Fréquence générale tri : "
+                            f"{SECTORS[sector]['tri']}. Question : {question}\n"
+                            f"Sources : {SCHEDULE_URL} et {PRO_URL}"
+                        ),
+                    )
+                    result = response.output_text
+                except Exception:
+                    result = answer_question(question, sector)
+                    st.info("L'IA n'est pas disponible pour le moment ; réponse guidée affichée.")
+            else:
+                result = answer_question(question, sector)
+                st.caption("Mode guidé activé. Pour les réponses générées par IA, configure OPENAI_API_KEY.")
+            st.subheader("Réponse")
+            st.write(result)
+            st.markdown(f"Sources : [Collecte générale]({SCHEDULE_URL}) · [Professionnels]({PRO_URL})")
+
+    st.caption(f"Application informative — {datetime.now().strftime('%d/%m/%Y')}. Vérifie toujours les consignes propres à l'hôtel.")
+
+if __name__ == "__main__":
+    main()
