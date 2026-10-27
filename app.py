@@ -1,96 +1,96 @@
-import os
 import streamlit as st
+from datetime import datetime
+
+# Grasse Déchets — version volontairement simple et robuste.
+# Aucune clé API nécessaire, aucun appel réseau au démarrage.
 
 st.set_page_config(
     page_title="Grasse Déchets",
     page_icon="♻️",
-    layout="centered",
+    layout="wide",
 )
 
 SCHEDULE_URL = "https://www.paysdegrasse.fr/points-et-frequence-de-collecte"
 PRO_URL = "https://www.paysdegrasse.fr/dechets-professionnels"
 PHONE = "0800 506 586"
 
-SECTORS = {
-    "Je ne connais pas mon secteur": {
-        "ordures": "À vérifier selon l'adresse",
-        "tri": "À vérifier selon l'adresse",
-    },
-    "Centre-ville": {"ordures": "Mardi et samedi (indicatif)", "tri": "Jeudi (indicatif)"},
-    "Centre historique": {"ordures": "À confirmer", "tri": "Lundi et jeudi (indicatif)"},
-    "Saint-Claude": {"ordures": "Mardi et samedi (indicatif)", "tri": "Mercredi (indicatif)"},
-    "Le Plan / Saint-Marc / Sainte-Marguerite": {"ordures": "Mardi et samedi (indicatif)", "tri": "Vendredi (indicatif)"},
-    "Saint-François / Super Grasse": {"ordures": "Lundi et vendredi (indicatif)", "tri": "Mardi (indicatif)"},
-    "Les 4 Chemins / Saint-Antoine / Saint-Jacques / Sainte-Anne": {"ordures": "Lundi et vendredi (indicatif)", "tri": "Jeudi (indicatif)"},
-    "Les Aspres / La Tourache / Les Roumiguières / Valcluse": {"ordures": "Lundi et vendredi (indicatif)", "tri": "Samedi (indicatif)"},
-    "Saint-Mathieu / Magagnosc / Saint-Jean / Saint-Joseph / Plascassier": {"ordures": "Mardi et samedi (indicatif)", "tri": "Lundi (indicatif)"},
-}
-
 st.markdown("""
 <style>
-.stApp { background: #f4f7f4; }
-.block-container { max-width: 900px; padding-top: 2rem; }
-.hero { padding: 1.8rem; border-radius: 18px; background: #174d38; color: white; margin-bottom: 1rem; }
-.hero h1 { color: white; margin: .3rem 0; }
-.hero p { color: #e0eee5; margin-bottom: 0; }
-.card { background: white; border: 1px solid #dce7df; border-radius: 14px; padding: 1rem; min-height: 120px; }
-.label { color: #637368; font-size: .9rem; }
-.value { color: #174d38; font-weight: 700; font-size: 1.15rem; margin-top: .5rem; }
+  .stApp { background: #f5f7f4; }
+  .block-container { max-width: 1050px; padding-top: 2rem; padding-bottom: 3rem; }
+  .hero { background: #163f30; color: #fff; border-radius: 22px; padding: 2rem; margin-bottom: 1.4rem; }
+  .hero h1 { color: #fff; font-size: 2.6rem; margin: .25rem 0 .5rem 0; }
+  .hero p { color: #dcebe2; font-size: 1.05rem; margin-bottom: 0; }
+  .tile { background: white; border: 1px solid #e0e8e1; border-radius: 16px; padding: 1.2rem; min-height: 125px; }
+  .tile-label { color: #627267; font-size: .9rem; }
+  .tile-value { color: #163f30; font-size: 1.2rem; font-weight: 700; margin-top: .6rem; }
+  div.stButton > button[kind="primary"] { background: #176747; border: none; border-radius: 10px; min-height: 2.8rem; }
+  div.stButton > button { border-radius: 10px; }
 </style>
 <div class="hero">
-  <div>♻️ GRASSE DÉCHETS</div>
-  <h1>Quand sortir les poubelles ?</h1>
-  <p>Informations de collecte pour les quartiers de Grasse.</p>
+  <div>♻️ GRASSE DÉCHETS · GUIDE DE COLLECTE</div>
+  <h1>Les poubelles, au bon moment.</h1>
+  <p>Informations de collecte pour les habitants et les professionnels de Grasse.</p>
 </div>
 """, unsafe_allow_html=True)
 
-st.subheader("1. Choisis ton secteur")
-sector = st.selectbox("Secteur de Grasse", list(SECTORS.keys()))
-info = SECTORS[sector]
+with st.sidebar:
+    st.title("♻️ Grasse Déchets")
+    st.write("Paramètres")
+    audience = st.radio("Profil", ["Habitant", "Professionnel / hôtel"])
+    sector = st.selectbox(
+        "Secteur (fréquences générales)",
+        [
+            "Je ne sais pas",
+            "Centre-ville",
+            "Centre historique",
+            "Saint-Claude",
+            "Le Plan / Saint-Marc / Sainte-Marguerite",
+            "Saint-François / Super Grasse",
+            "Les 4 Chemins / Saint-Antoine / Saint-Jacques / Sainte-Anne",
+            "Les Aspres / La Tourache / Les Roumiguières / Valcluse",
+            "Saint-Mathieu / Magagnosc / Saint-Jean / Saint-Joseph / Plascassier",
+        ],
+    )
+    st.caption("Pour les professionnels, la convention de collecte de l'établissement peut prévaloir.")
 
-col1, col2 = st.columns(2)
-with col1:
-    st.markdown(
-        f'<div class="card"><div class="label">🗑️ Ordures ménagères</div>'
-        f'<div class="value">{info["ordures"]}</div></div>',
-        unsafe_allow_html=True,
-    )
-with col2:
-    st.markdown(
-        f'<div class="card"><div class="label">♻️ Tri sélectif</div>'
-        f'<div class="value">{info["tri"]}</div></div>',
-        unsafe_allow_html=True,
-    )
+# Ces valeurs sont présentées comme indicatives, jamais comme un planning garanti.
+frequencies = {
+    "Centre-ville": ("Mardi et samedi (à confirmer)", "Jeudi (à confirmer)"),
+    "Centre historique": ("À vérifier sur le calendrier officiel", "Lundi et jeudi (à confirmer)"),
+    "Saint-Claude": ("Mardi et samedi (à confirmer)", "Mercredi (à confirmer)"),
+    "Le Plan / Saint-Marc / Sainte-Marguerite": ("Mardi et samedi (à confirmer)", "Vendredi (à confirmer)"),
+    "Saint-François / Super Grasse": ("Lundi et vendredi (à confirmer)", "Mardi (à confirmer)"),
+    "Les 4 Chemins / Saint-Antoine / Saint-Jacques / Sainte-Anne": ("Lundi et vendredi (à confirmer)", "Jeudi (à confirmer)"),
+    "Les Aspres / La Tourache / Les Roumiguières / Valcluse": ("Lundi et vendredi (à confirmer)", "Samedi (à confirmer)"),
+    "Saint-Mathieu / Magagnosc / Saint-Jean / Saint-Joseph / Plascassier": ("Mardi et samedi (à confirmer)", "Lundi (à confirmer)"),
+    "Je ne sais pas": ("Recherche par adresse nécessaire", "Recherche par adresse nécessaire"),
+}
+ordures, tri = frequencies[sector]
+
+st.subheader("Aperçu de la collecte")
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.markdown(f'<div class="tile"><div class="tile-label">🗑️ Ordures ménagères</div><div class="tile-value">{ordures}</div></div>', unsafe_allow_html=True)
+with c2:
+    st.markdown(f'<div class="tile"><div class="tile-label">♻️ Tri sélectif</div><div class="tile-value">{tri}</div></div>', unsafe_allow_html=True)
+with c3:
+    st.markdown(f'<div class="tile"><div class="tile-label">📅 Date du jour</div><div class="tile-value">{datetime.now().strftime("%d/%m/%Y")}</div></div>', unsafe_allow_html=True)
 
 st.warning(
-    "Les jours affichés sont indicatifs et doivent être confirmés avec le calendrier officiel. "
-    "Pour un hôtel, commerce ou restaurant, la convention professionnelle peut prévoir d'autres modalités."
+    "Ces fréquences sont indicatives et doivent être confirmées avec le calendrier officiel. "
+    "Pour un hôtel, un restaurant ou un commerce, vérifie les modalités professionnelles."
 )
 
-st.subheader("2. Pose ta question")
-user_type = st.radio("Tu es :", ["Habitant", "Professionnel"], horizontal=True)
-question = st.text_area(
+st.subheader("Assistant de collecte")
+st.write("Pose une question sur les ordures, le tri, les cartons ou les déchets encombrants.")
+question = st.text_input(
     "Ta question",
-    placeholder="Ex. : Quand sortir les cartons ? Est-ce que les horaires sont différents pour un hôtel ?",
-    height=100,
+    placeholder="Ex. : Quand sortir les cartons pour mon hôtel ?",
 )
+ask = st.button("Répondre", type="primary")
 
-if st.button("Obtenir une réponse", type="primary", use_container_width=True):
+if ask:
     if not question.strip():
-        st.error("Écris une question avant de continuer.")
+        st.error("Écris d'abord une question.")
     else:
-        q = question.lower()
-        if user_type == "Professionnel" or any(word in q for word in ["hôtel", "hotel", "commerce", "restaurant", "professionnel", "convention"]):
-            answer = (
-                "Pour un professionnel, les fréquences générales du quartier ne suffisent pas à confirmer "
-                "le jour de collecte. Vérifie la convention de collecte de l'établissement ou consulte "
-                f"la page officielle : {PRO_URL}. Téléphone du service : {PHONE}."
-            )
-        elif any(word in q for word in ["tri", "carton", "recycl", "emballage", "papier", "jaune"]):
-            answer = (
-                f"Pour le secteur « {sector} », l'information indicative sur le tri est : {info['tri']}. "
-                f"Vérifie le calendrier officiel pour ton adresse : {SCHEDULE_URL}."
-            )
-        elif any(word in q for word in ["encombrant", "meuble", "matelas", "gravats"]):
-            answer = (
-                "Ne dépose pas les encombrants sur le trottoir sans consigne. Consulte les règles et "
